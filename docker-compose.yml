@@ -1,0 +1,45 @@
+volumes:
+  redis-data:
+  mysql-data:
+  https-portal-data:
+services:
+  https-portal:
+    environment:
+      STAGE: local
+      DOMAINS: 'sample.lvh.me -> http://app:3000'
+    image: steveltn/https-portal:1
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - https-portal-data:/var/lib/https-portal
+    depends_on:
+      - app
+  app: &rails_build
+    build:
+      context: .
+      dockerfile: docker/rails/Dockerfile
+    environment:
+      SELENIUM_DRIVER_URL: http://chrome:4444/wd/hub
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - db
+      - chrome
+  redis:
+    image: redis:7.0
+    volumes:
+      - redis-data:/data
+  db:
+    # https://dev.mysql.com/doc/refman/8.0/ja/docker-mysql-more-topics.html
+    image: mysql/mysql-server:5.7
+    environment:
+      - MYSQL_ROOT_HOST=%
+      - MYSQL_ALLOW_EMPTY_PASSWORD=1
+    volumes:
+      - mysql-data:/var/lib/mysql
+  chrome:
+    image: seleniarm/standalone-chromium
+    ports:
+      - "4444:4444"
